@@ -1,7 +1,6 @@
 library(tidyverse)
 #question 1
 gdp_df <- read_csv("../data/gdp_per_capita.csv")
-#life_expectancy <- read_csv("../data/life_expectancy.csv")
 gdp_df |> slice(1:10)
 gdp_df |> slice_tail(n=10)
 #question 2
@@ -69,10 +68,62 @@ continents
 #question 14
 gdp_df <- gdp_df |> full_join(continents)
 gdp_df
-#question 15: num countries/cont.
+#question 15
 num_countries_continent <- gdp_df |> 
   group_by(Continent) |> 
   summarize(count = n_distinct(Country)) |> 
   drop_na()
 num_countries_continent
 ggplot(num_countries_continent, aes(Continent, y=count)) + geom_col()
+#question 16
+gdp_df_2021 <- gdp_df |> filter(Year == 2021)
+ggplot(gdp_df_2021, aes(x=Continent, y=GDP_Per_Capita)) + geom_boxplot()
+#question 17 & 18
+life_expectancy <- read_csv("../data/life_expectancy.csv", skip=3)
+life_expectancy <- life_expectancy |> 
+  select(-`Country Code`, -`Indicator Name`, -`Indicator Code`, "Country" = `Country Name`) |> 
+  pivot_longer(!`Country`, names_to="Year", values_to="Life_Expectancy") |> 
+  mutate_at("Year", as.double)
+life_expectancy
+#question 19
+first_country_to_80 <- life_expectancy |> 
+  group_by(Country) |> 
+  filter(Life_Expectancy >= 80) |> 
+  summarize(year_to_80 = min(Year)) |> 
+  ungroup() |> 
+  arrange(year_to_80) |> 
+  slice(1)
+first_country_to_80
+#question 20
+gdp_le <- gdp_df |> full_join(life_expectancy)
+gdp_le |> slice(1:5)
+gdp_le |> slice_tail(n=5)
+#question 21
+gdp_le_2021 <- gdp_le |> filter(Year == 2021)
+gdp_le_2021 |> filter(Life_Expectancy >= 80) |> tally()
+#question 22
+top3_gdp <- gdp_le_2021 |> 
+  arrange(desc(GDP_Per_Capita)) |> 
+  slice(1:3)
+top3_gdp_countries <- top3_gdp |> pull(Country)
+top3 <- gdp_le |> 
+  group_by(Country) |> 
+  filter(Country %in% top3_gdp_countries)
+p <- ggplot(top3, aes(x=Year, y=Life_Expectancy)) + geom_line()
+p + facet_grid(cols=vars(Country))
+#question 23
+ggplot(gdp_le_2021, aes(x=GDP_Per_Capita, y=Life_Expectancy)) + geom_point()
+#I notice that there is a positive correlation!
+
+#question 24
+library(corrr)
+gdp_le_2021 |> correlate()
+#this means there is a fairly high correlation between LE and GDP per Capita. As one increases, so does the other!
+
+#question 25
+gdp_le_2021 <- gdp_le_2021 |> 
+  mutate(log_GDP_Per_Capita = log(GDP_Per_Capita))
+gdp_le_2021 |> correlate()
+ggplot(gdp_le_2021, aes(x=log_GDP_Per_Capita, y=Life_Expectancy)) + geom_point()
+#There is an even higher correlation between the log of GDP Per Capita and Life Expectancy... 
+#the plot demonstrates this linear relationship!
